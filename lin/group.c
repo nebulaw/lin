@@ -154,5 +154,3 @@ int lin_group_info_init(const char *group_name) {
 int lin_group_info_update(const char *group_name, LGroupInfo info) {
   return 0;
 }
-
-

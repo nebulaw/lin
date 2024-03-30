@@ -61,6 +61,12 @@ int main(int argc, char **argv) {
     }
   }
 
+  // as flags are in the beginning of the argv
+  // we traverse until the command is not found
+  argvi = 0;
+  while (argvi < argc && strcmp(argv[argvi], command) != 0)
+    argvi++;
+
   // preprocess before command will be executed
   // if the command is not 'init', then .lin
   // directory should exist
