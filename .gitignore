@@ -1,0 +1,12 @@
+
+lins
+
+.clang-tidy
+cmake-build-debug/
+build/
+bin/
+
+.vscode/
+.lin/
+.idea/
+
