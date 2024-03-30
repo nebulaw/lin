@@ -69,3 +69,10 @@ unsigned long lin_io_count_lines(const char *file_path) {
 
   return line_count;
 }
+
+unsigned long lin_env_get_time(void) {
+  struct timeval timeval;
+  gettimeofday(&timeval, NULL);
+  return (unsigned long) (timeval.tv_sec) * 1000 +
+         (unsigned long) (timeval.tv_usec) / 1000;
+}

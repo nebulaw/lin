@@ -1,5 +1,6 @@
 #define _LIN_ENV_INIT
 #include "env.h"
+#include "group.h"
 #include "help.h"
 #include "init.h"
 
@@ -15,15 +16,16 @@ struct LCmdProcessMap {
 };
 
 static struct LCmdProcessMap cmd_map[] = {
-    { "help",   lin_cmd_execute_help },
-    { "init",   lin_cmd_execute_init },
-    { NULL,     NULL},
+    { "help",     lin_cmd_execute_help },
+    { "init",     lin_cmd_execute_init },
+    { "group",    lin_cmd_execute_group },
+    { NULL, NULL},
 };
 
 static struct option arg_options[] = {
-    { "group",    required_argument,  0, 'g' },
-    { "message",  required_argument,  0, 'm' },
-    { "verbose",  no_argument,        0, 'v' },
+    { "group",    required_argument,  0,   'g' },
+    { "message",  required_argument,  0,   'm' },
+    { "verbose",  no_argument,        0,   'v' },
     { 0, 0, 0, 0},
 };
 
@@ -35,42 +37,45 @@ int main(int argc, char **argv) {
   int is_processed = 0;
 
   if (argc < 2) {
-    return EXIT_FAILURE;
+    fprintf(stdout, "lin: no command specified\n");
+    lin_help();
+    exit(EXIT_FAILURE);
   }
 
   // obtain command while skipping first flags
   int argvi = 1;
-  while (argv[argvi] && *argv[argvi] == '-') {
+  while (argvi < argc && *argv[argvi] == '-') {
     argvi++;
   }
   command = argv[argvi];
 
   // parsing flags rearranges program arguments so that the flags are placed at
   int op;
-  while ((op = getopt_long(argc, argv_ptr, "g:m:v", arg_options, NULL) != -1)) {
+  while ((op = getopt_long(argc, argv_ptr, "m:g:v", arg_options, NULL)) != -1) {
     switch (op) {
-    case 'g':
-      lin_env_set_group(optarg, strlen(optarg));
-      is_message_present = 1;
-      break;
-    case 'v':
-      lin_env_set_verbose(1);
-      break;
-    case 'm':
-      lin_env_set_message(optarg, strlen(optarg));
-      break;
-    case '?':
-      exit(EXIT_FAILURE);
-    default:
-      break;
+    case 'g': lin_env_set_group(optarg, strlen(optarg)); is_group_present = 1; break;
+    case 'v': lin_env_set_verbose(1); break;
+    case 'm': lin_env_set_message(optarg, strlen(optarg)); is_message_present = 1; break;
+    case '?': exit(EXIT_FAILURE);
+    default: break;
     }
   }
 
+  // preprocess before command will be executed
+  // if the command is not 'init', then .lin
+  // directory should exist
   if (strcmp(command, "init") != 0) {
     // TODO: check if .lin directory exists
+    if (!lin_dot_dir_exists()) {
+      fprintf(stderr, "lin: .lin directory not found\n");
+      exit(EXIT_FAILURE);
+    } else if (!is_group_present) {
+      lin_env_set_group("default", 7);
+    } else if (!lin_group_exists(lin_env_group)) {
+      fprintf(stderr, "lin: group not found: %s\n", lin_env_group);
+      exit(EXIT_FAILURE);
+    }
   }
-
-  // TODO: check if group exists
 
   for (int i = 0; cmd_map[i].cmd != NULL; i++) {
     if (strcmp(command, cmd_map[i].cmd) == 0) {

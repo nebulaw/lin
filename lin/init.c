@@ -1,4 +1,5 @@
 #include "env.h"
+#include "group.h"
 #include "init.h"
 #include "linio.h"
 
@@ -17,7 +18,7 @@ int lin_dot_dir_initialize(void) {
   struct stat st = {0};
   if (stat(".lin", &st) == -1) {
     if (mkdir(".lin", 0755) == 0) {
-      // TODO: create default group
+      lin_group_create("default");
       printf("Successfully initialized .lin directory.\n");
       return L_INIT_SUCCESS;
     } else {
@@ -30,6 +31,8 @@ int lin_dot_dir_initialize(void) {
 }
 
 int lin_dot_dir_reinitialize(void) {
+  // TODO: implement reinitialize logic or not?
+  printf("Successfully reinitialized .lin directory.\n");
   return 0;
 }
 

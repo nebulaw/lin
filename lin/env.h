@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 _LIN_EXTERN char lin_env_group[25];
 _LIN_EXTERN char lin_env_message[201];
@@ -29,10 +30,17 @@ enum LStatus {
 
   L_PATH_CREATED,
   L_PATH_NOT_CREATED,
+
+  L_GROUP_CREATED,
+  L_GROUP_ALREADY_EXISTS,
+  L_GROUP_NOT_CREATED,
+  L_GROUP_REMOVED,
+  L_GROUP_NOT_REMOVED,
+  L_GROUP_NOT_FOUND,
 };
 
 void lin_env_set_message(char *message, size_t len);
-void lin_env_set_group(char *group_name, size_t len);
 void lin_env_set_verbose(int verbose);
+void lin_env_set_group(char *group_name, size_t len);
 
 #endif // _LIN_SHARED_ENV
