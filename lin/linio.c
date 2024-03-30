@@ -6,9 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <stdlib.h>
 
-#define LIN_FILE_BUFFER_SIZE 4096
+#define LIN_FILE_BUFFER_SIZE 8192
 
 int lin_io_path_exists(char *path) {
   struct stat st = {0};
@@ -38,36 +37,30 @@ int lin_io_path_remove_file_cb(const char *fpath, const struct stat *sb, int typ
 }
 
 unsigned long lin_io_count_lines(const char *file_path) {
-  FILE *fptr = fopen(file_path, "r");
-  if (fptr == NULL) {
-    return -1;
+  char buf[LIN_FILE_BUFFER_SIZE];
+  FILE *file;
+  size_t nfound = 0;
+  int nread;
+
+  file = fopen(file_path, "r");
+  if (file == NULL) {
+    return 0;
   }
 
-  int line_count = 0;
-  char buffer[LIN_FILE_BUFFER_SIZE];
-  size_t bytes_read;
-
-  int previous_char_was_newline = 1; // Initialize to 1 to handle files starting with a newline
-
-  while ((bytes_read = fread(buffer, 1, LIN_FILE_BUFFER_SIZE, fptr)) > 0) {
-    for (size_t i = 0; i < bytes_read; i++) {
-      if (buffer[i] == '\n') {
-        line_count++;
-        previous_char_was_newline = 1;
-      } else {
-        previous_char_was_newline = 0;
-      }
-    }
+  while ((nread = fread(buf, 1, LIN_FILE_BUFFER_SIZE, file)) > 0) {
+    char const *p;
+    for (p = buf; (p = memchr(p, '\n', buf + nread - p)); nfound++, p++);
   }
 
-  // If the last character in the fptr is not a newline, increment line count
-  if (!previous_char_was_newline) {
-    line_count++;
+  if (ferror(file)) {
+    perror("Error reading file");
+    fclose(file);
+    return 1;
   }
 
-  free(fptr);
+  fclose(file);
 
-  return line_count;
+  return nfound;
 }
 
 unsigned long lin_env_get_time(void) {
