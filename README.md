@@ -7,6 +7,8 @@ and how it goes.
 
 ## Build
 
+You can build the project by running the following commands:
+
 ``sh
 mkdir build && cd build
 cmake .. && make
