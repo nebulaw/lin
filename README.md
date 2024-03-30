@@ -9,7 +9,7 @@ and how it goes.
 
 You can build the project by running the following commands:
 
-``sh
+```sh
 mkdir build && cd build
 cmake .. && make
-``
+```
