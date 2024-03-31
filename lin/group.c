@@ -102,6 +102,7 @@ int lin_group_create(const char *group_name) {
     group_info.total_files = 0;
     group_info.total_lines = 0;
 
+    // TODO: write info object this should decode strings
     fwrite(&group_info, sizeof(group_info), 1, info_file);
     fclose(info_file);
 

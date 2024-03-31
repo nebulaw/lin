@@ -1,9 +1,9 @@
 # Lin - Fast, Reliable Project Overview System
 
-Lin is just mnaawh. Lin means everything whatever you'd like to.
-It might be Laverage Insufficient Napping or whatever really.
-But remember, it's just a tool to help you look over your project
-and how it goes.
+Lin is a versatile acronym that can represent anything you wish. It could stand
+for 'Leverage Insufficient Napping' or any other phrase you'd like to think.
+However, it's important to remember that Lin is simply a tool designed to help
+you oversee your project and monitor its progress.
 
 ## Build
 
