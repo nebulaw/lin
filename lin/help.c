@@ -19,10 +19,10 @@ void lin_help_group() {
   puts("  lin group remove [group-name]\n");
 
   puts("Subcommand:");
-  puts("  create    create group by specifying name");
-  puts("  remove    delete group\n");
+  puts("  create, mk    add a new group");
+  puts("  remove, rm    delete an existing group\n");
 
-  puts("  -g, --group       specify group to work with");
+  // puts("  -g, --group       specify group to work with");
   puts("  -v, --verbose     be verbose on your actions");
 }
 
@@ -48,6 +48,6 @@ void lin_cmd_execute_help(int argc, int argvi, char **argv) {
   } else if (strcmp(argv[argvi], "add") == 0) {
     lin_help_add();
   } else {
-    lin_help();
+    fprintf(stderr, "lin: %s subcommand not found\n", argv[argvi]);
   }
 }

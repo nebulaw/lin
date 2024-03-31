@@ -19,7 +19,7 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
   }
 
   int st;
-  if (strcmp(argv[argvi], "create") == 0) {
+  if (strcmp(argv[argvi], "create") == 0 || strcmp(argv[argvi], "mk") == 0) {
     if (++argvi == argc) {
       fprintf(stdout, "lin: please specify group name.\n");
       exit(EXIT_FAILURE);
@@ -27,7 +27,9 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
     st = lin_group_create(argv[argvi]);
     switch (st) {
     case L_GROUP_CREATED:
-      fprintf(stdout, "lin: %s created.\n", argv[argvi]);
+      if (lin_env_verbose) {
+        fprintf(stdout, "lin: %s created.\n", argv[argvi]);
+      }
     break;
     case L_GROUP_ALREADY_EXISTS:
       fprintf(stdout, "lin: %s already exists.\n", argv[argvi]);
@@ -36,7 +38,7 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
       fprintf(stderr, "lin: %s not created.\n", argv[argvi]);
       exit(EXIT_FAILURE);
     }
-  } else if (strcmp(argv[argvi], "remove") == 0) {
+  } else if (strcmp(argv[argvi], "remove") == 0 || strcmp(argv[argvi], "rm") == 0) {
     // TODO: check function status
     st = lin_group_remove(argv[++argvi]);
     if (st == L_GROUP_NOT_FOUND) {
@@ -46,7 +48,9 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
       fprintf(stdout, "lin: %s not removed.\n", argv[argvi]);
       exit(EXIT_FAILURE);
     } else {
-      fprintf(stdout, "lin: %s removed.\n", argv[argvi]);
+      if (lin_env_verbose) {
+        fprintf(stdout, "lin: %s removed.\n", argv[argvi]);
+      }
     }
   } else {
     fprintf(stderr, "lin: %s subcommand not found\n", argv[argvi]);
@@ -111,10 +115,6 @@ int lin_group_create(const char *group_name) {
 //              read_group_info.total_lines, read_group_info.total_files, read_group_info.total_checkpoints);
 //    }
 
-    if (lin_env_verbose) {
-      fprintf(stdout, "lin: %s group created.\n", group_name);
-    }
-
     // return the status
     return L_GROUP_CREATED;
   }
@@ -132,9 +132,6 @@ int lin_group_remove(const char *group_name) {
   snprintf(group_path, sizeof(group_path), ".lin/%s", group_name);
 
   if (lin_io_path_remove(group_path) == 0) {
-    if (lin_env_verbose) {
-      fprintf(stdout, "lin: %s removed.\n", group_name);
-    }
     return L_GROUP_REMOVED;
   }
 
