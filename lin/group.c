@@ -68,11 +68,9 @@ int lin_group_create(const char *group_name) {
 
   char group_path[PATH_MAX_LEN];
   char objects_path[PATH_MAX_LEN];
-  char info_file_path[PATH_MAX_LEN];
 
   snprintf(group_path, sizeof(group_path), ".lin/%s", group_name);
   snprintf(objects_path, sizeof(objects_path), ".lin/%s/objects", group_name);
-  snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
 
   if (stat(group_path, &group_path_st) == -1) {
     // creating group and objects directories
@@ -80,41 +78,9 @@ int lin_group_create(const char *group_name) {
       return L_GROUP_NOT_CREATED;
     }
 
-    // TODO: implement a function for creating info file
-
-    // create info file for the group
-    LGroupInfo group_info;
-    FILE *info_file = fopen(info_file_path, "wb");
-    if (info_file == NULL) {
-      // cleanup (remove group path) if info file could not be created
-      lin_io_path_remove(group_path);
+    if (lin_group_info_create(group_name) != 0) {
       return L_GROUP_NOT_CREATED;
     }
-
-    // copy group_name chars to info.group_name
-    size_t group_name_len = strlen(group_name);
-    strncpy(group_info.group_name, group_name, group_name_len);
-    group_info.group_name[group_name_len] = '\0';
-    // initial stats
-    group_info.created_ms = lin_env_get_time();
-    group_info.updated_ms = lin_env_get_time();
-    group_info.total_checkpoints = 0;
-    group_info.total_files = 0;
-    group_info.total_lines = 0;
-
-    // TODO: write info object this should decode strings
-    fwrite(&group_info, sizeof(group_info), 1, info_file);
-    fclose(info_file);
-
-//    if (lin_env_verbose) {
-//      LGroupInfo read_group_info;
-//      info_file = fopen(info_file_path, "rb");
-//      fread(&read_group_info, sizeof(read_group_info), 1, info_file);
-//      fclose(info_file);
-//      fprintf(stdout, "lin: info: name=%s, created=%lld, updated=%lld, total_lines=%lld, total_files=%d, total_checkpoints=%d\n",
-//              read_group_info.group_name, read_group_info.created_ms, read_group_info.updated_ms,
-//              read_group_info.total_lines, read_group_info.total_files, read_group_info.total_checkpoints);
-//    }
 
     // return the status
     return L_GROUP_CREATED;
@@ -135,7 +101,6 @@ int lin_group_remove(const char *group_name) {
   if (lin_io_path_remove(group_path) == 0) {
     return L_GROUP_REMOVED;
   }
-
   return L_GROUP_NOT_REMOVED;
 }
 
@@ -145,10 +110,79 @@ int lin_group_exists(const char *group_name) {
   return lin_io_path_exists(path);
 }
 
-int lin_group_info_init(const char *group_name) {
+int lin_group_info_create(const char *group_name) {
+  char info_file_path[PATH_MAX_LEN];
+  snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
+
+  // create info file for the group
+  LGroupInfo group_info;
+  FILE *info_file = fopen(info_file_path, "wb");
+  if (info_file == NULL) {
+    return 1;
+  }
+
+  // copy group_name chars to info.group_name
+  size_t group_name_len = strlen(group_name);
+  strncpy(group_info.group_name, group_name, group_name_len);
+  group_info.group_name[group_name_len] = '\0';
+  // initial stats
+  group_info.created_ms = lin_env_get_time();
+  group_info.updated_ms = lin_env_get_time();
+  group_info.total_checkpoints = 0;
+  group_info.total_files = 0;
+  group_info.total_lines = 0;
+
+  // TODO: decode strings in the info object and write it
+  //       this should be done for update method as well
+  fwrite(&group_info, sizeof(group_info), 1, info_file);
+  fclose(info_file);
+
+  if (lin_env_verbose) {
+    LGroupInfo read_group_info;
+    info_file = fopen(info_file_path, "rb");
+    fread(&read_group_info, sizeof(read_group_info), 1, info_file);
+    fclose(info_file);
+    fprintf(stdout, "lin: info: name=%s, created=%lld, updated=%lld, total_lines=%lld, total_files=%d, total_checkpoints=%d\n",
+            read_group_info.group_name, read_group_info.created_ms, read_group_info.updated_ms,
+            read_group_info.total_lines, read_group_info.total_files, read_group_info.total_checkpoints);
+  }
+
   return 0;
 }
 
 int lin_group_info_update(const char *group_name, LGroupInfo info) {
+  // obtain path for info file
+  char info_file_path[PATH_MAX_LEN];
+  snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
+
+  // first open for reading in binary mode
+  LGroupInfo group_info;
+  FILE *info_file = fopen(info_file_path, "rb");
+  if (info_file == NULL) {
+    return 1;
+  }
+
+  // read the info object and close it
+  fread(&group_info, sizeof(group_info), 1, info_file);
+  fclose(info_file);
+
+  // now open for writing in binary mode
+  info_file = fopen(info_file_path, "wb");
+
+  // update the info object
+  if (*info.group_name) {
+    size_t group_name_len = strlen(info.group_name);
+    strncpy(group_info.group_name, info.group_name, group_name_len);
+    group_info.group_name[group_name_len] = '\0';
+  }
+  group_info.total_files = info.total_files;
+  group_info.total_lines = info.total_lines;
+  group_info.total_checkpoints = info.total_checkpoints;
+  group_info.updated_ms = lin_env_get_time();
+
+  // and write it back
+  fwrite(&group_info, sizeof(group_info), 1, info_file);
+  fclose(info_file);
+
   return 0;
 }

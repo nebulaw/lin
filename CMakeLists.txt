@@ -7,6 +7,8 @@ set(HEADERS
         lin/help.h
         lin/init.h
         lin/group.h
+        lin/enc.h
+        lin/obj.h
 )
 
 set(SOURCES
@@ -17,6 +19,8 @@ set(SOURCES
         lin/linio.c
         lin/linio.h
         lin/group.c
+        lin/enc.c
+        lin/obj.c
 )
 
 # Add the executable target
