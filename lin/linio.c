@@ -9,6 +9,11 @@
 
 #define LIN_FILE_BUFFER_SIZE 8192
 
+// Simplify a path by removing redundant slashes and dot directories
+int lin_io_simplify_path(char dst[PATH_MAX_LEN], char *path) {
+  return realpath(path, dst) == NULL ? 1 : 0;
+}
+
 int lin_io_path_exists(char *path) {
   struct stat st = {0};
   return stat(path, &st) == 0;
