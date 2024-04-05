@@ -3,6 +3,7 @@
 #include "group.h"
 #include "help.h"
 #include "init.h"
+#include "checkpoint.h"
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -12,13 +13,15 @@ typedef void (*lin_command_execute)(int argc, int argvi, char **argv);
 
 struct LCmdProcessMap {
   const char *cmd;
+  const char *alias;
   lin_command_execute process;
 };
 
 static struct LCmdProcessMap cmd_map[] = {
-    { "help",     lin_cmd_execute_help },
-    { "init",     lin_cmd_execute_init },
-    { "group",    lin_cmd_execute_group },
+    { .cmd = "help",       .alias = "-", lin_cmd_execute_help },
+    { .cmd = "init",       .alias = "-", lin_cmd_execute_init },
+    { .cmd = "group",      .alias = "-", lin_cmd_execute_group },
+    { .cmd = "checkpoint", .alias = "cp", lin_cmd_execute_checkpoint },
     { NULL, NULL},
 };
 
@@ -84,7 +87,8 @@ int main(int argc, char **argv) {
   }
 
   for (int i = 0; cmd_map[i].cmd != NULL; i++) {
-    if (strcmp(command, cmd_map[i].cmd) == 0) {
+    if (strcmp(command, cmd_map[i].cmd) == 0 ||
+        (*cmd_map[i].alias != '-' && strcmp(command, cmd_map[i].alias) == 0)) {
       cmd_map[i].process(argc, argvi + 1, argv);
       is_processed = 1;
       break;

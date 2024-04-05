@@ -9,6 +9,7 @@ set(HEADERS
         lin/group.h
         lin/enc.h
         lin/obj.h
+        lin/checkpoint.h
 )
 
 set(SOURCES
@@ -21,6 +22,7 @@ set(SOURCES
         lin/group.c
         lin/enc.c
         lin/obj.c
+        lin/checkpoint.c
 )
 
 # Add the executable target
