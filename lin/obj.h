@@ -17,6 +17,11 @@ typedef struct {
     int encoded_root_node[PATH_MAX_LEN];
 } LGroupInfoObject;
 
+typedef struct {
+    long long added_ms;
+    long long lines;
+} LFileInfoObject;
+
 
 int lin_obj_file_create(const char *file_path);
 int lin_obj_file_remove(const char *file_path);

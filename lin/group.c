@@ -1,15 +1,13 @@
 // group command assumes that .lin/ directory exists
 #define LIN_TIME_ENV
-#include "env.h"
 #include "group.h"
+#include "env.h"
 
 #include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include <sys/time.h>
-
 
 void lin_cmd_execute_group(int argc, int argvi, char **argv) {
   if (argc <= 2) {
@@ -30,15 +28,18 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
       if (lin_env_verbose) {
         fprintf(stdout, "lin: %s created.\n", argv[argvi]);
       }
-    break;
+      break;
     case L_GROUP_ALREADY_EXISTS:
       fprintf(stdout, "lin: %s already exists.\n", argv[argvi]);
-    break;
+      break;
     case L_GROUP_NOT_CREATED:
       fprintf(stderr, "lin: %s not created.\n", argv[argvi]);
       exit(EXIT_FAILURE);
+    default:
+      break;
     }
-  } else if (strcmp(argv[argvi], "remove") == 0 || strcmp(argv[argvi], "rm") == 0) {
+  } else if (strcmp(argv[argvi], "remove") == 0 ||
+             strcmp(argv[argvi], "rm") == 0) {
     // TODO: check function status
     st = lin_group_remove(argv[++argvi]);
     if (st == L_GROUP_NOT_FOUND) {
@@ -142,9 +143,12 @@ int lin_group_info_create(const char *group_name) {
     info_file = fopen(info_file_path, "rb");
     fread(&read_group_info, sizeof(read_group_info), 1, info_file);
     fclose(info_file);
-    fprintf(stdout, "lin: info: name=%s, created=%lld, updated=%lld, total_lines=%lld, total_files=%d, total_checkpoints=%d\n",
-            read_group_info.group_name, read_group_info.created_ms, read_group_info.updated_ms,
-            read_group_info.total_lines, read_group_info.total_files, read_group_info.total_checkpoints);
+    fprintf(stdout,
+            "lin: info: name=%s, created=%lu, updated=%lu, total_lines=%lu, "
+            "total_files=%d, total_checkpoints=%d\n",
+            read_group_info.group_name, read_group_info.created_ms,
+            read_group_info.updated_ms, read_group_info.total_lines,
+            read_group_info.total_files, read_group_info.total_checkpoints);
   }
 
   return 0;

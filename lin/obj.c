@@ -18,3 +18,7 @@ int lin_obj_write_object(const char *dst_path, void *object, size_t object_size)
   FILE *dst_file = fopen(dst_path, "wb");
 
 }
+
+int lin_obj_write_checkpoint_object(const char *dst_path) {
+
+}
