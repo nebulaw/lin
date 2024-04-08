@@ -1,15 +1,17 @@
-// group command assumes that .lin/ directory exists
-#define LIN_TIME_ENV
-#include "group.h"
 #include "env.h"
+#include "group.h"
+#include "linio.h"
 
 #include <ftw.h>
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 
-void lin_cmd_execute_group(int argc, int argvi, char **argv) {
+static char path_buffer[PATH_MAX];
+
+void lin_cmd_execute_group(int argc, int argvi, char **argv)
+{
   if (argc <= 2) {
     fprintf(stdout, "lin: please specify subcommand.\n");
     fprintf(stdout, "Type 'lin help group' for more.\n");
@@ -24,22 +26,19 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
     }
     st = lin_group_create(argv[argvi]);
     switch (st) {
-    case L_GROUP_CREATED:
-      if (lin_env_verbose) {
-        fprintf(stdout, "lin: %s created.\n", argv[argvi]);
-      }
-      break;
-    case L_GROUP_ALREADY_EXISTS:
-      fprintf(stdout, "lin: %s already exists.\n", argv[argvi]);
-      break;
-    case L_GROUP_NOT_CREATED:
-      fprintf(stderr, "lin: %s not created.\n", argv[argvi]);
-      exit(EXIT_FAILURE);
-    default:
-      break;
+      case L_GROUP_CREATED:
+        if (lin_env_verbose) {
+          fprintf(stdout, "lin: %s created.\n", argv[argvi]);
+        }
+        break;
+      case L_GROUP_ALREADY_EXISTS:
+        fprintf(stdout, "lin: %s already exists.\n", argv[argvi]);
+        break;
+      case L_GROUP_NOT_CREATED:
+        fprintf(stderr, "lin: %s not created.\n", argv[argvi]);
+        exit(EXIT_FAILURE);
     }
-  } else if (strcmp(argv[argvi], "remove") == 0 ||
-             strcmp(argv[argvi], "rm") == 0) {
+  } else if (strcmp(argv[argvi], "remove") == 0 || strcmp(argv[argvi], "rm") == 0) {
     // TODO: check function status
     st = lin_group_remove(argv[++argvi]);
     if (st == L_GROUP_NOT_FOUND) {
@@ -61,14 +60,15 @@ void lin_cmd_execute_group(int argc, int argvi, char **argv) {
   exit(EXIT_SUCCESS);
 }
 
-int lin_group_create(const char *group_name) {
+int lin_group_create(const char *group_name)
+{
   if (lin_group_exists(group_name)) {
     return L_GROUP_ALREADY_EXISTS;
   }
   struct stat group_path_st = {0};
 
-  char group_path[PATH_MAX_LEN];
-  char objects_path[PATH_MAX_LEN];
+  char group_path[PATH_MAX];
+  char objects_path[PATH_MAX];
 
   snprintf(group_path, sizeof(group_path), ".lin/%s", group_name);
   snprintf(objects_path, sizeof(objects_path), ".lin/%s/objects", group_name);
@@ -90,29 +90,29 @@ int lin_group_create(const char *group_name) {
   return L_GROUP_ALREADY_EXISTS;
 }
 
-int lin_group_remove(const char *group_name) {
+int lin_group_remove(const char *group_name)
+{
   if (!lin_group_exists(group_name)) {
     return L_GROUP_NOT_FOUND;
   }
 
-  char group_path[PATH_MAX_LEN];
+  char group_path[PATH_MAX];
 
   snprintf(group_path, sizeof(group_path), ".lin/%s", group_name);
 
-  if (lin_io_path_remove(group_path) == 0) {
-    return L_GROUP_REMOVED;
-  }
-  return L_GROUP_NOT_REMOVED;
+  return lin_io_path_remove(group_path) == 0 ? L_GROUP_REMOVED : L_GROUP_NOT_REMOVED;
 }
 
-int lin_group_exists(const char *group_name) {
-  char path[PATH_MAX_LEN];
+int lin_group_exists(const char *group_name)
+{
+  char path[PATH_MAX];
   snprintf(path, sizeof(path), ".lin/%s", group_name);
   return lin_io_path_exists(path);
 }
 
-int lin_group_info_create(const char *group_name) {
-  char info_file_path[PATH_MAX_LEN];
+int lin_group_info_create(const char *group_name)
+{
+  char info_file_path[PATH_MAX];
   snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
 
   // create info file for the group
@@ -122,10 +122,6 @@ int lin_group_info_create(const char *group_name) {
     return 1;
   }
 
-  // copy group_name chars to info.group_name
-  size_t group_name_len = strlen(group_name);
-  strncpy(group_info.group_name, group_name, group_name_len);
-  group_info.group_name[group_name_len] = '\0';
   // initial stats
   group_info.created_ms = lin_env_get_time();
   group_info.updated_ms = lin_env_get_time();
@@ -144,9 +140,9 @@ int lin_group_info_create(const char *group_name) {
     fread(&read_group_info, sizeof(read_group_info), 1, info_file);
     fclose(info_file);
     fprintf(stdout,
-            "lin: info: name=%s, created=%lu, updated=%lu, total_lines=%lu, "
+            "lin: info: created=%lu, updated=%lu, total_lines=%lu, "
             "total_files=%d, total_checkpoints=%d\n",
-            read_group_info.group_name, read_group_info.created_ms,
+            read_group_info.created_ms,
             read_group_info.updated_ms, read_group_info.total_lines,
             read_group_info.total_files, read_group_info.total_checkpoints);
   }
@@ -154,9 +150,10 @@ int lin_group_info_create(const char *group_name) {
   return 0;
 }
 
-int lin_group_info_update(const char *group_name, LGroupInfo info) {
+int lin_group_info_update(const char *group_name, LGroupInfo info)
+{
   // obtain path for info file
-  char info_file_path[PATH_MAX_LEN];
+  char info_file_path[PATH_MAX];
   snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
 
   // first open for reading in binary mode
@@ -173,12 +170,6 @@ int lin_group_info_update(const char *group_name, LGroupInfo info) {
   // now open for writing in binary mode
   info_file = fopen(info_file_path, "wb");
 
-  // update the info object
-  if (*info.group_name) {
-    size_t group_name_len = strlen(info.group_name);
-    strncpy(group_info.group_name, info.group_name, group_name_len);
-    group_info.group_name[group_name_len] = '\0';
-  }
   group_info.total_files = info.total_files;
   group_info.total_lines = info.total_lines;
   group_info.total_checkpoints = info.total_checkpoints;
