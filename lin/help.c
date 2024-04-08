@@ -31,6 +31,9 @@ static void lin_help_group() {
 static void lin_help_add() {
   puts("Usage: lin add <file> [<file>...] [options]\n");
 
+  puts("! Add command only works for files, so adding directories");
+  puts("! is not supported yet.\n");
+
   puts("Options");
   puts("  -g, --group       Specify group to add file to.");
   puts("  -v, --verbose     Be verbose on your actions.");
