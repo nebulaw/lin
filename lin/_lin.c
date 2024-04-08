@@ -1,5 +1,6 @@
 #define _LIN_ENV_INIT
 #include "env.h"
+#include "add.h"
 #include "group.h"
 #include "help.h"
 #include "init.h"
@@ -18,10 +19,11 @@ struct LCmdProcessMap {
 };
 
 static struct LCmdProcessMap cmd_map[] = {
-    { .cmd = "help",       .alias = "-", lin_cmd_execute_help },
-    { .cmd = "init",       .alias = "-", lin_cmd_execute_init },
-    { .cmd = "group",      .alias = "-", lin_cmd_execute_group },
-    { .cmd = "checkpoint", .alias = "cp", lin_cmd_execute_checkpoint },
+    { .cmd = "help",        .alias = "h",   lin_cmd_execute_help },
+    { .cmd = "init",        .alias = "-",   lin_cmd_execute_init },
+    { .cmd = "group",       .alias = "-",   lin_cmd_execute_group },
+    { .cmd = "checkpoint",  .alias = "cp",  lin_cmd_execute_checkpoint },
+    { .cmd = "add",         .alias = "a",   lin_cmd_execute_add },
     { NULL, NULL},
 };
 
@@ -73,7 +75,7 @@ int main(int argc, char **argv) {
   // preprocess before command will be executed
   // if the command is not 'init', then .lin
   // directory should exist
-  if (strcmp(command, "init") != 0) {
+  if (strcmp(command, "init") != 0 && strcmp(command, "help") != 0) {
     // TODO: check if .lin directory exists
     if (!lin_dot_dir_exists()) {
       fprintf(stderr, "lin: .lin directory not found\n");
