@@ -6,7 +6,10 @@ and monitor its progress.
 
 ## Idea
 Lin works from from the shadows. It helps you to track your progress
-while developing your projects.
+while developing your projects. It is not a tool like git or mercurial is,
+it is not far from them but with less and some specific features. It manages
+todo-comments and total lines of grouped files by checkpointing group's state.
+I really have no idea why one might use this but here it is.
 
 ## Build
 
