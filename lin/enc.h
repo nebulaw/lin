@@ -16,4 +16,4 @@ int lin_hash_sha1sum(char destination[], const char *value);
 
 int lin_hash_sha1sum_from_file(char destination[64], FILE *fptr);
 
-#endif // LIN_HASH_H_
+#endif /* LIN_HASH_H_ */

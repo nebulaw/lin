@@ -61,10 +61,10 @@ int lin_hash_sha1sum_from_file(char destination[EVP_MAX_MD_SIZE], FILE *fptr)
   md = EVP_get_digestbyname("SHA1");
   md_ctx = EVP_MD_CTX_create();
 
-  // generate hash
   EVP_DigestInit_ex(md_ctx, md, NULL);
-  while (fgets(hash_file_buffer, BUFSIZ, fptr) != NULL) {
-    EVP_DigestUpdate(md_ctx, hash_file_buffer, strlen(hash_file_buffer));
+  size_t nread;
+  while ((nread = fread(hash_file_buffer, 1, BUFSIZ, fptr)) > 0) {
+    EVP_DigestUpdate(md_ctx, hash_file_buffer, nread);
   }
   EVP_DigestFinal_ex(md_ctx, md_value, &md_len);
   EVP_MD_CTX_destroy(md_ctx);

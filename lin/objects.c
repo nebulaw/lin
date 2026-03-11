@@ -11,7 +11,7 @@ static char pathbuf[PATH_MAX];
 
 void lin_object_inner_group_from_str(char dest[INNER_GROUP_LEN], const char *src)
 {
-  strncpy(dest, src, 6);
+  strncpy(dest, src, INNER_GROUP_LEN - 1);
   dest[INNER_GROUP_LEN - 1] = '\0';
 }
 
@@ -34,6 +34,7 @@ int lin_object_inner_group_merge(const char group_name[GROUP_MAX_LEN], const cha
 
 int lin_object_create(const char *group_name, const char *object_name, FILE *fptr, int append)
 {
+  (void)group_name;
   if (strlen(object_name) < 7) {
     return L_OBJECT_NAME_TOO_SHORT;
   }

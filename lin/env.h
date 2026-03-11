@@ -1,11 +1,6 @@
 #ifndef _LIN_SHARED_ENV
 #define _LIN_SHARED_ENV
 
-// this is for traversing directory tree
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 500
-#endif
-
 #ifndef _LIN_ENV_INIT
 #define _LIN_EXTERN extern
 #else

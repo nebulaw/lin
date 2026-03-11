@@ -15,4 +15,4 @@ int lin_object_inner_group_merge(const char group_name[GROUP_MAX_LEN], const cha
 
 void lin_object_inner_group_from_str(char dest[INNER_GROUP_LEN], const char *src);
 
-#endif // LIN_OBJECTS_H_
+#endif /* LIN_OBJECTS_H_ */
