@@ -10,4 +10,5 @@ bin/
 .vscode/
 .lin/
 .idea/
+.claude/
 
