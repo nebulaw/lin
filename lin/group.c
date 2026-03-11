@@ -1,183 +1,112 @@
-#include "env.h"
 #include "group.h"
+#include "error.h"
+#include "groupv2.h"
 #include "linio.h"
 
-#include <ftw.h>
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static char path_buffer[PATH_MAX];
-
-void lin_cmd_execute_group(int argc, int argvi, char **argv)
+static void group_create(LinContext *ctx, int argc, int argvi, char **argv)
 {
-  if (argc <= 2) {
-    fprintf(stdout, "lin: please specify subcommand.\n");
-    fprintf(stdout, "Type 'lin help group' for more.\n");
-    exit(-1);
-  }
-
-  int st;
-  if (strcmp(argv[argvi], "create") == 0 || strcmp(argv[argvi], "mk") == 0) {
-    if (++argvi == argc) {
-      fprintf(stdout, "lin: please specify group name.\n");
-      exit(EXIT_FAILURE);
-    }
-    st = lin_group_create(argv[argvi]);
-    switch (st) {
-      case L_GROUP_CREATED:
-        if (lin_env_verbose) {
-          fprintf(stdout, "lin: %s created.\n", argv[argvi]);
-        }
-        break;
-      case L_GROUP_ALREADY_EXISTS:
-        fprintf(stdout, "lin: %s already exists.\n", argv[argvi]);
-        break;
-      case L_GROUP_NOT_CREATED:
-        fprintf(stderr, "lin: %s not created.\n", argv[argvi]);
-        exit(EXIT_FAILURE);
-    }
-  } else if (strcmp(argv[argvi], "remove") == 0 || strcmp(argv[argvi], "rm") == 0) {
-    // TODO: check function status
-    st = lin_group_remove(argv[++argvi]);
-    if (st == L_GROUP_NOT_FOUND) {
-      fprintf(stdout, "lin: %s not found.\n", argv[argvi]);
-      exit(EXIT_FAILURE);
-    } else if (st == L_GROUP_NOT_REMOVED) {
-      fprintf(stdout, "lin: %s not removed.\n", argv[argvi]);
-      exit(EXIT_FAILURE);
-    } else {
-      if (lin_env_verbose) {
-        fprintf(stdout, "lin: %s removed.\n", argv[argvi]);
-      }
-    }
-  } else {
-    fprintf(stderr, "lin: %s subcommand not found\n", argv[argvi]);
+  if (argvi >= argc) {
+    fprintf(stderr, "lin: specify group name\n");
     exit(EXIT_FAILURE);
   }
 
-  exit(EXIT_SUCCESS);
+  const char *name = argv[argvi];
+  int rc = lin_groupv2_create(ctx, name);
+
+  switch (rc) {
+  case LIN_OK:
+    fprintf(stdout, "created group '%s'\n", name);
+    break;
+  case LIN_ERR_GROUP_EXISTS:
+    fprintf(stdout, "lin: group '%s' already exists\n", name);
+    break;
+  default:
+    fprintf(stderr, "lin: failed to create group '%s': %s\n",
+            name, lin_error_get()->message);
+    exit(EXIT_FAILURE);
+  }
 }
 
-int lin_group_create(const char *group_name)
+static void group_remove(LinContext *ctx, int argc, int argvi, char **argv)
 {
-  if (lin_group_exists(group_name)) {
-    return L_GROUP_ALREADY_EXISTS;
+  if (argvi >= argc) {
+    fprintf(stderr, "lin: specify group name\n");
+    exit(EXIT_FAILURE);
   }
-  struct stat group_path_st = {0};
 
-  char group_path[PATH_MAX];
-  char objects_path[PATH_MAX];
+  const char *name = argv[argvi];
 
-  snprintf(group_path, sizeof(group_path), ".lin/%s", group_name);
-  snprintf(objects_path, sizeof(objects_path), ".lin/%s/objects", group_name);
+  if (strcmp(name, "default") == 0) {
+    fprintf(stderr, "lin: cannot remove the default group\n");
+    exit(EXIT_FAILURE);
+  }
 
-  if (stat(group_path, &group_path_st) == -1) {
-    // creating group and objects directories
-    if (mkdir(group_path, 0755) != 0 || mkdir(objects_path, 0755) != 0) {
-      return L_GROUP_NOT_CREATED;
+  int rc = lin_groupv2_remove(ctx, name);
+  if (rc == LIN_ERR_GROUP_NOT_FOUND) {
+    fprintf(stderr, "lin: group '%s' not found\n", name);
+    exit(EXIT_FAILURE);
+  } else if (rc != LIN_OK) {
+    fprintf(stderr, "lin: failed to remove '%s': %s\n",
+            name, lin_error_get()->message);
+    exit(EXIT_FAILURE);
+  }
+
+  fprintf(stdout, "removed group '%s'\n", name);
+}
+
+static void group_list(LinContext *ctx)
+{
+  char names[LIN_GROUP_LIST_MAX][LIN_GROUP_MAX + 1];
+  int count = lin_groupv2_list(ctx, names, LIN_GROUP_LIST_MAX);
+
+  if (count < 0) {
+    fprintf(stderr, "lin: failed to list groups: %s\n",
+            lin_error_get()->message);
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < count; i++) {
+    LinGroupInfo info;
+    int rc = lin_groupv2_info_read(ctx, names[i], &info);
+
+    if (rc == LIN_OK) {
+      fprintf(stdout, "  %-20s  %u files  %llu lines  %u checkpoints\n",
+              names[i],
+              info.total_files,
+              (unsigned long long)info.total_lines,
+              info.total_checkpoints);
+    } else {
+      fprintf(stdout, "  %-20s  (unreadable info)\n", names[i]);
     }
-
-    if (lin_group_info_create(group_name) != 0) {
-      return L_GROUP_NOT_CREATED;
-    }
-
-    // return the status
-    return L_GROUP_CREATED;
   }
 
-  return L_GROUP_ALREADY_EXISTS;
+  if (count == 0)
+    fprintf(stdout, "no groups found\n");
 }
 
-int lin_group_remove(const char *group_name)
+void lin_cmd_execute_group(LinContext *ctx, int argc, int argvi, char **argv)
 {
-  if (!lin_group_exists(group_name)) {
-    return L_GROUP_NOT_FOUND;
+  if (argvi >= argc) {
+    fprintf(stderr, "lin: specify subcommand (create, remove, list)\n");
+    fprintf(stderr, "type 'lin help group' for more\n");
+    exit(EXIT_FAILURE);
   }
 
-  char group_path[PATH_MAX];
+  const char *sub = argv[argvi];
+  argvi++;
 
-  snprintf(group_path, sizeof(group_path), ".lin/%s", group_name);
-
-  return lin_io_path_remove(group_path) == 0 ? L_GROUP_REMOVED : L_GROUP_NOT_REMOVED;
-}
-
-int lin_group_exists(const char *group_name)
-{
-  char path[PATH_MAX];
-  snprintf(path, sizeof(path), ".lin/%s", group_name);
-  return lin_io_path_exists(path);
-}
-
-int lin_group_info_create(const char *group_name)
-{
-  char info_file_path[PATH_MAX];
-  snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
-
-  // create info file for the group
-  LGroupInfo group_info;
-  FILE *info_file = fopen(info_file_path, "wb");
-  if (info_file == NULL) {
-    return 1;
+  if (strcmp(sub, "create") == 0 || strcmp(sub, "mk") == 0) {
+    group_create(ctx, argc, argvi, argv);
+  } else if (strcmp(sub, "remove") == 0 || strcmp(sub, "rm") == 0) {
+    group_remove(ctx, argc, argvi, argv);
+  } else if (strcmp(sub, "list") == 0 || strcmp(sub, "ls") == 0) {
+    group_list(ctx);
+  } else {
+    fprintf(stderr, "lin: unknown subcommand: %s\n", sub);
+    exit(EXIT_FAILURE);
   }
-
-  // initial stats
-  group_info.created_ms = lin_env_get_time();
-  group_info.updated_ms = lin_env_get_time();
-  group_info.total_checkpoints = 0;
-  group_info.total_files = 0;
-  group_info.total_lines = 0;
-
-  // TODO: decode strings in the info object and write it
-  //       this should be done for update method as well
-  fwrite(&group_info, sizeof(group_info), 1, info_file);
-  fclose(info_file);
-
-  if (lin_env_verbose) {
-    LGroupInfo read_group_info;
-    info_file = fopen(info_file_path, "rb");
-    fread(&read_group_info, sizeof(read_group_info), 1, info_file);
-    fclose(info_file);
-    fprintf(stdout,
-            "lin: info: created=%lu, updated=%lu, total_lines=%lu, "
-            "total_files=%d, total_checkpoints=%d\n",
-            read_group_info.created_ms,
-            read_group_info.updated_ms, read_group_info.total_lines,
-            read_group_info.total_files, read_group_info.total_checkpoints);
-  }
-
-  return 0;
-}
-
-int lin_group_info_update(const char *group_name, LGroupInfo info)
-{
-  // obtain path for info file
-  char info_file_path[PATH_MAX];
-  snprintf(info_file_path, sizeof(info_file_path), ".lin/%s/info", group_name);
-
-  // first open for reading in binary mode
-  LGroupInfo group_info;
-  FILE *info_file = fopen(info_file_path, "rb");
-  if (info_file == NULL) {
-    return 1;
-  }
-
-  // read the info object and close it
-  fread(&group_info, sizeof(group_info), 1, info_file);
-  fclose(info_file);
-
-  // now open for writing in binary mode
-  info_file = fopen(info_file_path, "wb");
-
-  group_info.total_files = info.total_files;
-  group_info.total_lines = info.total_lines;
-  group_info.total_checkpoints = info.total_checkpoints;
-  group_info.updated_ms = lin_env_get_time();
-
-  // and write it back
-  fwrite(&group_info, sizeof(group_info), 1, info_file);
-  fclose(info_file);
-
-  return 0;
 }

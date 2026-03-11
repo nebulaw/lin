@@ -1,67 +1,96 @@
-#include "env.h"
 #include "checkpoint.h"
-#include "linio.h"
+#include "error.h"
+#include "groupv2.h"
+#include "snap.h"
 
 #include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <dirent.h>
+#include <stdlib.h>
 
-static char pathbuf[PATH_MAX_LEN];
+void lin_cmd_execute_checkpoint(LinContext *ctx, int argc, int argvi,
+                                char **argv)
+{
+  (void)argc;
+  (void)argvi;
+  (void)argv;
 
-static unsigned long lin_checkpoint_file(char *file_path) {
-  unsigned long lines = lin_io_count_lines(file_path);
-  if (lin_env_verbose) {
-    fprintf(stdout, "%5lu: %s.\n", lines, file_path);
-  }
-  return lines;
-}
+  const char *message = ctx->message_set ? ctx->message : NULL;
 
-static unsigned long lin_checkpoint_dir(char *dir_path) {
-  struct stat path_st = {0};
-  unsigned long total_lines = 0;
-  struct dirent *dir_entry;
-  DIR *dir = opendir(dir_path);
-  if (dir) {
-    while ((dir_entry = readdir(dir)) != NULL) {
-      if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0) {
-        continue;
-      }
-      snprintf(pathbuf, sizeof(pathbuf), "%s/%s", dir_path, dir_entry->d_name);
-      if (stat(pathbuf, &path_st) == 0) {
-        if (S_ISREG(path_st.st_mode)) {
-          total_lines += lin_checkpoint_file(pathbuf);
-        } else if (S_ISDIR(path_st.st_mode)) {
-          total_lines += lin_checkpoint_dir(pathbuf);
-        }
-      }
-      pathbuf[0] = '\0'; // reset buffer
+  /* load previous state for delta reporting */
+  uint32_t prev_id = lin_snap_latest_id(ctx, ctx->group);
+  uint64_t prev_lines = 0;
+  uint32_t prev_files = 0;
+
+  if (prev_id > 0) {
+    LinSnapshot prev;
+    if (lin_snap_load(ctx, ctx->group, prev_id, &prev) == LIN_OK) {
+      prev_lines = prev.total_lines;
+      prev_files = prev.total_files;
+      lin_snap_free(&prev);
     }
-    closedir(dir);
   }
-  return total_lines;
-}
 
-void lin_cmd_execute_checkpoint(int argc, int argvi, char **argv) {
-  struct stat path_st = {0};
-  unsigned long total_lines = 0;
+  /* create snapshot */
+  int result = lin_snap_create(ctx, ctx->group, message);
+  if (result < 0) {
+    fprintf(stderr, "lin: checkpoint failed: %s\n",
+            lin_error_get()->message);
+    exit(EXIT_FAILURE);
+  }
 
-  while (argvi < argc) {
-    if (stat(argv[argvi], &path_st) == 0) {
-      if (S_ISREG(path_st.st_mode)) {
-        total_lines += lin_checkpoint_file(argv[argvi]);
-      } else if (S_ISDIR(path_st.st_mode)) {
-        total_lines += lin_checkpoint_dir(argv[argvi]);
-      }
-    } else {
-      fprintf(stderr, "%s: not found.\n", argv[argvi]);
+  uint32_t new_id = (uint32_t)result;
+
+  /* load the snapshot we just wrote for reporting */
+  LinSnapshot snap;
+  int rc = lin_snap_load(ctx, ctx->group, new_id, &snap);
+  if (rc != LIN_OK) {
+    fprintf(stderr, "lin: failed to read checkpoint: %s\n",
+            lin_error_get()->message);
+    exit(EXIT_FAILURE);
+  }
+
+  /* update group info */
+  LinGroupInfo info;
+  rc = lin_groupv2_info_read(ctx, ctx->group, &info);
+  if (rc == LIN_OK) {
+    info.total_lines       = snap.total_lines;
+    info.total_checkpoints = new_id;
+    lin_groupv2_info_write(ctx, ctx->group, &info);
+  }
+
+  /* report */
+  fprintf(stdout, "checkpoint #%u", new_id);
+  if (message != NULL)
+    fprintf(stdout, " \"%s\"", message);
+  fprintf(stdout, "\n");
+
+  fprintf(stdout, "  files: %u", snap.total_files);
+  if (prev_id > 0) {
+    int32_t df = (int32_t)snap.total_files - (int32_t)prev_files;
+    if (df != 0)
+      fprintf(stdout, " (%+d)", df);
+  }
+  fprintf(stdout, "\n");
+
+  fprintf(stdout, "  lines: %llu", (unsigned long long)snap.total_lines);
+  if (prev_id > 0) {
+    int64_t dl = (int64_t)snap.total_lines - (int64_t)prev_lines;
+    if (dl != 0)
+      fprintf(stdout, " (%+lld)", (long long)dl);
+  }
+  fprintf(stdout, "\n");
+
+  fprintf(stdout, "  size:  %llu bytes\n",
+          (unsigned long long)snap.total_size);
+
+  /* verbose: per-file details */
+  if (ctx->verbose) {
+    fprintf(stdout, "\n");
+    for (uint32_t i = 0; i < snap.entry_count; i++) {
+      fprintf(stdout, "  %7llu  %s\n",
+              (unsigned long long)snap.entries[i].line_count,
+              snap.entries[i].path);
     }
-    argvi++;
   }
-  fprintf(stdout, "-------------------------------\n");
-  fprintf(stdout, "%5lu: total lines.\n", total_lines);
-}
 
-int lin_checkpoint_create(const char *path) {
-
+  lin_snap_free(&snap);
 }

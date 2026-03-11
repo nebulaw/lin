@@ -1,9 +1,8 @@
-#ifndef LIN_INIT_H_
-#define LIN_INIT_H_
+#ifndef LIN_INIT_H
+#define LIN_INIT_H
 
-void lin_cmd_execute_init(int argc, int argvi, char **argv);
-int lin_dot_dir_initialize(void);
-int lin_dot_dir_reinitialize(void);
-int lin_dot_dir_exists(void);
+#include "context.h"
 
-#endif // LIN_INIT_H_
+void lin_cmd_execute_init(LinContext *ctx, int argc, int argvi, char **argv);
+
+#endif /* LIN_INIT_H */

@@ -1,22 +1,23 @@
 #include "linio.h"
-#include "env.h"
 
 #include <errno.h>
 #include <ftw.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 
 #define LIN_FILE_BUFFER_SIZE 8192
 
 // Simplify a path by removing redundant slashes and dot directories
-int lin_io_simplify_path(char dst[PATH_MAX], char *path)
+int lin_io_simplify_path(char dst[PATH_MAX], const char *path)
 {
   return realpath(path, dst) == NULL ? 1 : 0;
 }
 
-int lin_io_path_exists(char *path)
+int lin_io_path_exists(const char *path)
 {
   struct stat st = {0};
   return stat(path, &st) == 0;
@@ -29,21 +30,25 @@ int lin_io_path_create(char *path, mode_t mode)
     if (mkdir(path, mode) == -1) {
       if (errno != EEXIST) {
         *p = '/';
-        return L_PATH_NOT_CREATED;
+        return -1;
       }
     }
     *p = '/';
   }
-  return L_PATH_CREATED;
+  return 0;
 }
 
-int lin_io_path_remove(char *path)
+int lin_io_path_remove(const char *path)
 {
   return nftw(path, lin_io_path_remove_file_cb, 64, FTW_DEPTH | FTW_PHYS);
 }
 
-int lin_io_path_remove_file_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+int lin_io_path_remove_file_cb(const char *fpath, const struct stat *sb,
+                               int typeflag, struct FTW *ftwbuf)
 {
+  (void)sb;
+  (void)typeflag;
+  (void)ftwbuf;
   return remove(fpath);
 }
 
