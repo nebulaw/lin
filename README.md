@@ -1,15 +1,6 @@
 # lin
 
-A fast, local codebase analytics engine. `lin` tracks file metadata, line counts, growth trends, language composition, and project progress over time.
-
-It does not store your code or send data anywhere. It only tracks metadata: line counts, file sizes, SHA1 hashes, and timestamps. Think of it as a fitness tracker for your repo.
-
-## Why use lin?
-
-- **Privacy first.** It explicitly ignores code content and operates entirely offline.
-- **Fast and safe.** Written in C. It uses atomic binary writes and advisory file locking to ensure your analytics data never gets corrupted.
-- **Familiar workflow.** The CLI mirrors common `git` commands (`init`, `add`, `status`, `checkpoint`, `log`).
-- **Logical isolation.** You can group files logically (e.g., `frontend` vs `backend`) to track architectural pieces independently.
+Lin is just mnaawh. Lin means everything whatever you'd like to. It might be Leverage Insufficient Napping or whatever really. But remember, it's just a tool to help you look over your project and how it goes.
 
 ## Build
 
